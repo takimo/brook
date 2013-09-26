@@ -83,24 +83,26 @@ var module = { exports : {}};\n\
             },
             nodejs: {
                 options: {
-                    banner: 'var Namespace = require("../lib/namespace");\n',
-                    footer: 'module.exports = {\n\
-    ready: function(callback) {\n\
-        callback = callback || function(){};\n\
-        Namespace()\n\
-        .use("brook")\n\
-        .use("brook.channel")\n\
-        .use("brook.lambda")\n\
-        .use("brook.model")\n\
-        .use("brook.util")\n\
-        .apply(callback);\n\
+                    banner: 'var _ = require("underscore");\n\
+var exportObjects = {};\n\
+var ns = {\n\
+    provide: function(hashObject){\n\
+        _.extend(exportObjects, hashObject);\n\
     }\n\
-}\n\
-'
+};\n\
+',
+                    process: function(src, filepath){
+                        var originalSrc = src;
+                        src = src.replace(/^Namespace[\s\S]*\.define\(function\(\w*\){$/gm, "(function(){");
+                        src = src.replace(/^}\);$/mg, "})();");
+                        src = src.replace(/ns\.(?!provide)/mg, "exportObjects.");
+                        return src;
+                    },
+                    footer: 'module.exports = exportObjects;'
                 },
                 src: nodejs,
                 dest: 'build/node-brook.js'
-            },
+            }
         },
 
         /* uglify min */

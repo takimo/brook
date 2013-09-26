@@ -1,4 +1,10 @@
-var Namespace = require("../lib/namespace");
+var _ = require("underscore");
+var exportObjects = {};
+var ns = {
+    provide: function(hashObject){
+        _.extend(exportObjects, hashObject);
+    }
+};
 /**
 @fileOverview brook
 @author daichi.hiroki<hirokidaichi@gmail.com>
@@ -11,7 +17,7 @@ var Namespace = require("../lib/namespace");
 @name brook
 @namespace brookライブラリ群のルートとなる名前空間です。promiseの生成処理を持っています。
 */
-Namespace('brook').define(function(ns){
+(function(){
     var VERSION = "0.01";
     /**
      * @class brook.promiseで生成されるインスタンスのインナークラス
@@ -123,16 +129,16 @@ Namespace('brook').define(function(ns){
      * errorHandlerはnextで例外が発生した場合に呼ばれるpromiseか関数を受け付けます。
      * 引数が無い場合は、データをそのまま次の処理に送るpromiseを生成します。
      * @example
-     * var p = ns.promise(function(next,value){ next(value+1)});
+     * var p = exportObjects.promise(function(next,value){ next(value+1)});
      * @example
-     * var p = ns.promise();
+     * var p = exportObjects.promise();
      */
     var promise = function(next,errorHandler){return new Promise(next,errorHandler);};
     ns.provide({
         promise : promise,
         VERSION : VERSION
     });
-});
+})();
 
 
 /**
@@ -146,9 +152,7 @@ Namespace('brook').define(function(ns){
 @name brook.util
 @namespace details here
 */
-Namespace('brook.util')
-.use('brook promise')
-.define(function(ns){
+(function(){
     /**#@+
      * @methodOf brook.util
      */
@@ -157,7 +161,7 @@ Namespace('brook.util')
      * @param {Promise} promise
      */
     var mapper = function(f){
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             return next(f(val));
         });
     };
@@ -166,7 +170,7 @@ Namespace('brook.util')
      * @param {Promise} promise
      */
     var through = function(f){
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             f(val);
             return next(val);
         });
@@ -176,7 +180,7 @@ Namespace('brook.util')
      * @param {Promise} promise
      */
     var filter = function(f){
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             if( f(val) ) return next(val);
         });
     };
@@ -186,7 +190,7 @@ Namespace('brook.util')
     var takeBy = function(by){
         var num = 1;
         var queue = [];
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             queue.push( val );
             if( num++ % (by) === 0){
                 next(queue);
@@ -222,7 +226,7 @@ Namespace('brook.util')
      */
     var scatter = function(limit){
         var func = limit ? _getArrayWalkWithLimit(limit) : _arrayWalk;
-        return ns.promise(function(next,list){
+        return exportObjects.promise(function(next,list){
             func(list,next);
         });
     };
@@ -233,7 +237,7 @@ Namespace('brook.util')
         var msecFunc
             = ( typeof msec == 'function' ) ?
                 msec : function(){return msec;};
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             setTimeout(function(){
                 next(val);
             },msecFunc());
@@ -246,7 +250,7 @@ Namespace('brook.util')
             }
             setTimeout(function(){ p(next,val);},100);
         };
-        return ns.promise(p);
+        return exportObjects.promise(p);
     };
     var debug = function(sig){
         sig = sig ? sig : "debug";
@@ -255,7 +259,7 @@ Namespace('brook.util')
         });
     };
     var cond = function(f,promise){
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             if( !f(val) )
                 return next( val );
             promise.subscribe(function(val){
@@ -264,12 +268,12 @@ Namespace('brook.util')
         });
     };
     var match = function(dispatchTable, matcher){
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             var promise;
             if(matcher)
                 promise = dispatchTable[matcher(val)];
             if(!promise)
-                promise = dispatchTable[val] || dispatchTable.__default__ || ns.promise();
+                promise = dispatchTable[val] || dispatchTable.__default__ || exportObjects.promise();
             promise.subscribe(function(v){
                 next(v);
             },val);
@@ -277,7 +281,7 @@ Namespace('brook.util')
     };
     var LOCK_MAP = {};
     var unlock = function(name){
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             LOCK_MAP[name] = false;
             next(val);
         });
@@ -292,17 +296,17 @@ Namespace('brook.util')
                 tryLock(next,val);
             },100);
         });
-        return ns.promise(tryLock);
+        return exportObjects.promise(tryLock);
     };
     var from = function(value){
         if( value && value.observe ){
-            return ns.promise(function(next,val){
-                value.observe(ns.promise(function(n,v){
+            return exportObjects.promise(function(next,val){
+                value.observe(exportObjects.promise(function(n,v){
                     next(v);
                 }));
             });
         }
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             next(value);
         });
     };
@@ -312,7 +316,7 @@ Namespace('brook.util')
             = ( typeof msec == 'function' ) ?
                 msec : function(){return msec;};
 
-        return ns.promise(function(next,val){
+        return exportObjects.promise(function(next,val){
             var id = setInterval(function(){
                 next(val);
             },msecFunc());
@@ -322,7 +326,7 @@ Namespace('brook.util')
         });
     };
     var stopEmitInterval = function(name) {
-        return ns.promise(function(next, value) {
+        return exportObjects.promise(function(next, value) {
             clearInterval(EMIT_INTERVAL_MAP[name]);
             next(value);
         });
@@ -345,7 +349,7 @@ Namespace('brook.util')
         emitInterval: emitInterval,
         stopEmitInterval: stopEmitInterval
     });
-});
+})();
 
 
 
@@ -362,8 +366,7 @@ Namespace('brook.util')
 @namespace 簡単に小さな関数を作る為のテンプレートを提供します。
 */
 
-Namespace('brook.lambda')
-.define(function(ns){
+(function(){
     var cache = {};
     var hasArg = function(expression){
         return expression.indexOf('->') >= 0;
@@ -405,7 +408,7 @@ Namespace('brook.lambda')
     ns.provide({
         lambda : lambda
     });
-});
+})();
 
 /**
 @fileOverview brook.channel
@@ -418,10 +421,7 @@ Namespace('brook.lambda')
 @name brook.channel
 @namespace promiseをベースとしたobserver patternのシンプルな実装を提供します。
 */
-Namespace('brook.channel')
-.use('brook promise')
-.use('brook.util scatter')
-.define(function(ns){
+(function(){
     var indexOf = function(list, value) {
         for (var i = 0, l = list.length; i < l; i++) 
             if (list[i] === value) return i;
@@ -449,7 +449,7 @@ Namespace('brook.channel')
         proto.send = function(func){
             func = ( func ) ? func : through;
             var _self = this;
-            return ns.promise(function(next,val){
+            return exportObjects.promise(function(next,val){
                 _self.sendMessage(func(val));
                 next(val);
             });
@@ -458,12 +458,12 @@ Namespace('brook.channel')
          * @name sendMessage
          */
         proto.sendMessage = function(msg){
-            var scatter   = ns.scatter(1000);
+            var scatter   = exportObjects.scatter(1000);
             var sendError = sendChannel('error');
 
             this.queue.push(msg);
             var makeRunner = function(message) {
-                return ns.promise(function(next, promise) {
+                return exportObjects.promise(function(next, promise) {
                     promise.run(message);
                 });
             };
@@ -522,7 +522,7 @@ Namespace('brook.channel')
         stopObservingChannel : stopObservingChannel,
         createChannel  : function(){ return new Channel();}
     });
-});
+})();
 
 
 
@@ -537,12 +537,7 @@ Namespace('brook.channel')
 @name brook.model
 @namespace mvcにおけるmodelインタフェースを提供します。
 */
-Namespace('brook.model')
-.use('brook promise')
-.use('brook.util *')
-.use('brook.channel *')
-.use('brook.lambda *')
-.define(function(ns){
+(function(){
     /**
      * @class brook.model.createModelで生成されるインスタンスのインナークラス
      * @name _Model
@@ -562,13 +557,13 @@ Namespace('brook.model')
     Model.prototype.addMethod = function(method,promise){
         if( this.methods[method] )
             throw('already '+ method +' defined');
-        var channel = ns.createChannel();
+        var channel = exportObjects.createChannel();
         this.methods[method] = promise.bind( channel.send() );
         this.channels[method] = channel;
         return this;
     };
     Model.prototype.notify = function(method){
-        return ns.promise().bind( this.methods[method] );
+        return exportObjects.promise().bind( this.methods[method] );
     };
     Model.prototype.method   = function(method){
         if( !this.channels[method] )
@@ -581,17 +576,6 @@ Namespace('brook.model')
     ns.provide({
         createModel : createModel
     });
-});
+})();
 
-module.exports = {
-    ready: function(callback) {
-        callback = callback || function(){};
-        Namespace()
-        .use("brook")
-        .use("brook.channel")
-        .use("brook.lambda")
-        .use("brook.model")
-        .use("brook.util")
-        .apply(callback);
-    }
-}
+module.exports = exportObjects;
